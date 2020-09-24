@@ -1,0 +1,28 @@
+stages: [build, push]
+
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+  USER: gitlab
+
+build:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker build -t mmpx12/pwndb .
+
+push:
+  stage: push
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u $DOCKER_USER -p $DOCKER_TOKEN
+  script:
+    - 'docker run --rm -v `pwd`:/app mmpx12/pwndb --help |  grep "pwndb -b 2 -d gmail.com -o result.txt" || exit 1'
+    - docker push mmpx12/pwndb
+    - docker rmi -f mmpx12/pwndb
+
+
+

@@ -10,6 +10,7 @@ proxy="127.0.0.1:9050"
 exact=1
 exactdom=1
 wild="%"
+cmd="echo %"
 output=$(date +%d-%m-%d_%H-%M.txt)
 jobs=5
 

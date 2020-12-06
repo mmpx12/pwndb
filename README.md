@@ -75,6 +75,7 @@ docker run --rm -v `pwd`:/app pwndb --proxy 192.168.75.222:9050 -p fuckthepopo -
 -j|--jobs [number]        number of background jobs (max 10, 5 by default)
 -o|--output [file]        output file
 -x|--proxy [IP:PORT]      proxy and port of TOR
+-s|--server-status        check if pwndb server is up and exit
 ```
 
 whildecard character is %

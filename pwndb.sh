@@ -13,6 +13,7 @@ wild="%"
 cmd="echo %"
 output=$(date +%d-%m-%d_%H-%M.txt)
 jobs=5
+status=false
 
 usage(){
   echo -e """pwndb.sh
@@ -30,6 +31,7 @@ usage:
 -P|--pasword-list [FILE]  file containing password (1 per line)
 -o|--output [file]        output file
 -x|--proxy [IP:PORT]      proxy and port of TOR
+-s|--server-status        check if pwndb server is up and exit
 
 whildecard character is "%"
 
@@ -104,6 +106,9 @@ if [[ ${#@} > 0 ]]; then
         usage
         exit 0
         ;;
+      -s | --server-status)
+        status=true
+        ;;
       *)
         usage
         exit 1
@@ -114,6 +119,20 @@ if [[ ${#@} > 0 ]]; then
 else
   usage
   exit 1
+fi
+
+# Check if pwndb is up
+
+[[ $status == true ]] && echo -e "\e[33mChecking if pwndb is up ..."
+status_code=$(curl  --max-time 5 -sk -w "%{http_code}" --socks5-hostname $proxy pwndb2am4tzkvold.onion)
+if [[ $status_code == "000" ]]; then
+  echo -e "\e[31mPwndb server is down ..."
+  exit 1
+else
+  if [[ $status == true ]]; then
+    echo -e "\e[32mPwndb is up"
+    exit 0
+  fi
 fi
 
 

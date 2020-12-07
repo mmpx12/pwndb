@@ -8,9 +8,10 @@ this tool was build for solve limitations of pwndb:
 
 - 2000 result max
 - 45 sec of max_execution_time
-- only "like results" (for [pwndb.py](https://github.com/davidtavarez/pwndb))
-- reverse password search
-
+- Only "like results" (for [pwndb.py](https://github.com/davidtavarez/pwndb))
+- Reverse password search
+- Check if pwndb server is up
+- ...
 
 ## Install:
 
@@ -26,9 +27,21 @@ for the script you will need:
 then install with:
 
 ```sh
-sudo cp pwndb.sh /usr/bin/pwndb
+sudo curl -sk "https://raw.githubusercontent.com/mmpx12/pwndb/master/pwndb.sh" > /usr/bin/pwndb
 sudo chmod +x pwndb
 ```
+
+### Termux
+
+For termux run:
+
+```sh
+apt update && apt install -y tor pup curl
+curl -sk "https://raw.githubusercontent.com/mmpx12/pwndb/master/pwndb.sh" > /data/data/com.termux/files/usr/bin/pwndb
+chmod +x /data/data/com.termux/files/usr/bin/pwndb
+```
+
+If tor is not running it will start it automaticly and kill it when finish
 
 ### Docker
 
@@ -80,6 +93,16 @@ docker run --rm -v `pwd`:/app pwndb --proxy 192.168.75.222:9050 -p fuckthepopo -
 
 whildecard character is %
 
+
+#### check if pwndb is up 
+
+Since pwndb is regulary down you can check it with:
+
+```sh
+pwndb -s
+```
+
+It will exit in both case (up or down)
 
 #### users
 

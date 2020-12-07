@@ -2,7 +2,7 @@
 
 #stty -echoctl
 
-trap '[[ `ls $tmp/res/` ]] && cat  $tmp/res/* | sort > $output; rm -rf $tmp' EXIT
+trap '[[ `ls $tmp/res/` ]] && cat  $tmp/res/* | sort > $output; rm -rf $tmp; if ps -Af | grep "com\.termux" >/dev/null; then killall -9 tor; fi' EXIT
 
 tmp=$(mktemp -d --tmpdir=.)
 mkdir $tmp/req $tmp/res
@@ -119,6 +119,16 @@ if [[ ${#@} > 0 ]]; then
 else
   usage
   exit 1
+fi
+
+# check for termux
+
+if ps -Af | grep "com\.termux" > /dev/null ; then
+  if ! ps -A | grep tor >/dev/null ; then
+    echo "starting tor ..."
+    tor >/dev/null &
+    sleep 8
+  fi
 fi
 
 # Check if pwndb is up

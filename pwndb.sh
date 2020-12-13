@@ -11,6 +11,7 @@ exact=1
 exactdom=1
 wild="%"
 cmd="echo %"
+scyllaserver=false
 output=$(date +%d-%m-%d_%H-%M.txt)
 jobs=5
 status=false
@@ -26,6 +27,8 @@ usage:
 -D|--domain-list [FILE]   file containing domains (1 per line)
 -b|--brute-force [NUMBER] brute force   1 will be A to Z ,
                                         2 will be AA to ZZ
+-S|--scylla               Check on scylla.sh instead of pwndb
+                            (automatic if pwndb is down)
 -j|--jobs [number]        number of background jobs (default 5)
 -p|--password [PASSWORD]  search email from password
 -P|--pasword-list [FILE]  file containing password (1 per line)
@@ -41,6 +44,7 @@ pwndb -U user.lst -D domain.lst -x 127.0.0.1:9999
 pwndb -b 2 -d gmail.com -o result.txt
 pwndb -b 4 -j 10 -d "%.gouv.fr" 
 pwnd -p fuckthepopo -j 10 -o res.lst -x 192.168.75.225:9050 
+pwndb -S -u "test" -d "gmail.com"
 """
 }
 
@@ -50,6 +54,7 @@ if [[ ${#@} > 0 ]]; then
     case $1 in
       -u | --user )
         shift
+        user="$1"
         cmd="echo \"$1\""
         ;;
       -U | -user-list)
@@ -66,6 +71,7 @@ if [[ ${#@} > 0 ]]; then
       -d | --domain )
         shift
         domain=true
+        domainname="$1"
         cmddom="echo $1"
         ;;
       -D|--domain-list)
@@ -82,6 +88,7 @@ if [[ ${#@} > 0 ]]; then
       -p|--password)
         shift
         passwd=true
+        password="$1"
         cmd="echo $1"
         ;;
       -P|--password-list)
@@ -106,7 +113,10 @@ if [[ ${#@} > 0 ]]; then
         usage
         exit 0
         ;;
-      -s | --server-status)
+      -S|--scylla)
+        scyllaserver=true
+        ;;
+      -s|--server-status)
         status=true
         ;;
       *)
@@ -131,13 +141,77 @@ if ps -Af | grep "com\.termux" > /dev/null ; then
   fi
 fi
 
+pwait(){
+  while [ $(jobs -p | wc -l) -ge $1 ]; do
+    sleep 1
+  done
+}
+
 # Check if pwndb is up
+
+scylla(){
+res=1
+for ((start=0; 1>=${#res}; start=$((start+1000)))); do
+  nbr=$(wc -l $tmp/res/scylla 2>/dev/null || echo 0)
+  res=$(curl -sk "https://scylla.sh/search?q=$query&size=1000&start=$start" | jq -rc '.[].fields| [.email, .password // .passhash // "EMPTY" ]| @tsv')
+  [[ ${#res} -ne 0 ]] && while IFS=$'\t' read -r email pass; do
+    nbr=$((nbr+1))
+    echo -e "\e[31m[\e[37m$nbr\e[31m]--[\e[36m$email\e[31m]----[\e[35m$pass]"
+    echo "$email:$pass" >> $tmp/res/scylla$start.txt
+    done <<< "$res"
+done
+}
+
+scylla_mail(){
+  query="email:$1"
+  scylla $query
+}
+
+scylla_domain(){
+  query="email:$1"
+  scylla $query
+}
+
+scylla_pass(){
+  query="password:$1"
+  scylla $query
+}
+
+scylla_check(){
+  if [[ $passwd == true ]]; then
+    scylla_pass "$password" &
+    pwait 2
+    wait
+    exit
+  elif [[ $domain == true ]]; then
+    [[ $user != "" ]] || dom="*$domainname" && dom="$user@$domainname"
+    scylla_domain $dom &
+    pwait 2
+    wait
+    exit
+  elif [[ $user != "" ]]; then
+    [[ -z $domainname ]] && mail="$user*" || mail="$user@$domain"
+    scylla_mail $mail &
+    pwait 2
+    wait
+    exit
+  fi
+  exit
+}
+
+
+[[ $scyllaserver == true ]] && scylla_check
 
 [[ $status == true ]] && echo -e "\e[33mChecking if pwndb is up ..."
 status_code=$(curl  --max-time 5 -sk -w "%{http_code}" --socks5-hostname $proxy pwndb2am4tzkvold.onion)
 if [[ $status_code == "000" ]]; then
   echo -e "\e[31mPwndb server is down ..."
-  exit 1
+  if [[ $status != true ]]; then
+    echo -e "\e[33mSwitching to scylla.sh"
+    scylla_check
+  else
+    exit 1
+  fi
 else
   if [[ $status == true ]]; then
     echo -e "\e[32mPwndb is up"
@@ -179,14 +253,6 @@ req_n_parse(){
   done < <(eval pup pre < $tmp/req/$1.txt | sed '1,11d;$d')
   rm $tmp/req/$1.txt
 }
-
-
-pwait(){
-  while [ $(jobs -p | wc -l) -ge $1 ]; do
-    sleep 1
-  done
-}
-
 
 if [[ $passwd == true ]]; then
   while IFS= read -r passd; do

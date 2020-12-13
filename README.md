@@ -11,6 +11,7 @@ this tool was build for solve limitations of pwndb:
 - Only "like results" (for [pwndb.py](https://github.com/davidtavarez/pwndb))
 - Reverse password search
 - Check if pwndb server is up
+- Use scylla when pwndb is down (or not)
 - ...
 
 ## Install:
@@ -83,6 +84,8 @@ docker run --rm -v `pwd`:/app pwndb --proxy 192.168.75.222:9050 -p fuckthepopo -
 -D|--domain-list [FILE]   file containing domains (1 per line)
 -b|--brute-force [NUMBER] brute force   1 will be A to Z ,
                                         2 will be AA to ZZ
+-S|--scylla               Check on scylla.sh instead of pwndb
+                            (automatic if pwndb is down)
 -p|--password [PASSWORD]  reverse password search
 -P|--password-list [FILE] file containing passwords
 -j|--jobs [number]        number of background jobs (max 10, 5 by default)
@@ -103,6 +106,18 @@ pwndb -s
 ```
 
 It will exit in both case (up or down)
+
+
+#### Scylla
+
+If pwndb is down it will automaticly search on [scylla.sh](https://scylla.sh/api)
+
+But f pwndb is up and you want to search on scylla instead pwndb you can use:
+
+```sh
+pwndb -S -u test -o scylla.txt
+pwndb -S -u test -d gmail.com -o scylla.txt
+```
 
 #### users
 

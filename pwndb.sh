@@ -65,14 +65,15 @@ if [[ ${#@} > 0 ]]; then
         exact=0
         wild=""
         ;;
-      -E | --exact-domain)
-        exactdom=0
-        ;;
       -d | --domain )
         shift
         domain=true
         domainname="$1"
         cmddom="echo $1"
+        ;;
+      -E | --exact-domain)
+        exact=true
+        exactdom=0
         ;;
       -D|--domain-list)
         shift
@@ -150,50 +151,50 @@ pwait(){
 # Check if pwndb is up
 
 scylla(){
-res=1
-for ((start=0; 1>=${#res}; start=$((start+1000)))); do
+  cmd="$exact $domainname"
+  sleep 3
+res="a"
+for ((start=0; 1<=${#res}; start=$((start+1000)))); do
   nbr=$(wc -l $tmp/res/scylla 2>/dev/null || echo 0)
-  res=$(curl -sk "https://scylla.sh/search?q=$query&size=1000&start=$start" | jq -rc '.[].fields| [.email, .password // .passhash // "EMPTY" ]| @tsv')
+  if [[ $exact != "true" ]]; then
+    res=$(curl -sk "https://scylla.sh/search?q=$1&size=1000&start=$start" | jq -rc '.[].fields| [.email, if .password? then .password else if .passhash? then "(HASH) " + .passhash else "(EMPTY)" end end ]| @tsv')
+  else
+    res=$(curl -sk "https://scylla.sh/search?q=$1&size=1000&start=$start" | jq -rc '.[].fields| [.email, if .password? then .password else if .passhash? then "(HASH) " + .passhash else "(EMPTY)" end end ]| @tsv' 2>/dev/null | sort -u | grep "@$domainname")
+  fi
   [[ ${#res} -ne 0 ]] && while IFS=$'\t' read -r email pass; do
     nbr=$((nbr+1))
     echo -e "\e[31m[\e[37m$nbr\e[31m]--[\e[36m$email\e[31m]----[\e[35m$pass]"
     echo "$email:$pass" >> $tmp/res/scylla$start.txt
-    done <<< "$res"
+  done <<<"$res"
 done
 }
 
 scylla_mail(){
   query="email:$1"
-  scylla $query
+  scylla "$query" "$exact"
 }
 
 scylla_domain(){
   query="email:$1"
-  scylla $query
+  scylla "$query" "$exact"
 }
 
 scylla_pass(){
   query="password:$1"
-  scylla $query
+  scylla "$query" "$exact"
 }
 
 scylla_check(){
   if [[ $passwd == true ]]; then
-    scylla_pass "$password" &
-    pwait 2
-    wait
+    scylla_pass "$password"
     exit
   elif [[ $domain == true ]]; then
-    [[ $user != "" ]] || dom="*$domainname" && dom="$user@$domainname"
-    scylla_domain $dom &
-    pwait 2
-    wait
+    [[ -z $user ]] && dom="*$domainname" || dom="$user@$domainname"
+    scylla_domain "$dom"
     exit
   elif [[ $user != "" ]]; then
     [[ -z $domainname ]] && mail="$user*" || mail="$user@$domain"
-    scylla_mail $mail &
-    pwait 2
-    wait
+    scylla_mail "$mail"
     exit
   fi
   exit

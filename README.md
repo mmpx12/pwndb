@@ -11,8 +11,11 @@ this tool was build for solve limitations of pwndb:
 - Only "like results" (for [pwndb.py](https://github.com/davidtavarez/pwndb))
 - Reverse password search
 - Check if pwndb server is up
-- Use scylla when pwndb is down (or not)
 - ...
+
+It will also:
+- Use scylla when pwndb is down (or not)
+- Can be use with nmap as an NSE script
 
 ## Install:
 
@@ -28,8 +31,39 @@ for the script you will need:
 then install with:
 
 ```sh
-sudo curl -sk "https://raw.githubusercontent.com/mmpx12/pwndb/master/pwndb.sh" > /usr/bin/pwndb
-sudo chmod +x pwndb
+git clone git@github.com:mmpx12/pwndb.git
+cd pwndb
+sudo cp pwndb.sh /usr/bin/pwndb
+sudo chmod +x /usr/bin/pwndb
+```
+
+### Nmap NSE
+
+![nmap](nse.png)
+
+This script will check for all passwords from the target.
+
+#### Install
+
+After the previous step you can add the nse script as follow:
+
+```sh
+sudo cp pwndb.nse /usr/share/nmap/scripts/pwndb.nse
+sudo nmap --script-update
+```
+
+#### Run
+
+then just run
+
+```sh
+nmap --script pwndb test.me
+```
+
+If you don't want to check on pwndb and want to check directly on scylla (if you know that pwndb is down (very often)), you can pass args to the nse script for save couple of seconds:
+
+```sh
+nmap --script pwndb --script-args="pwndb.scylla=true" test.me
 ```
 
 ### Termux
@@ -118,6 +152,7 @@ But f pwndb is up and you want to search on scylla instead pwndb you can use:
 pwndb -S -u test -o scylla.txt
 pwndb -S -u test -d gmail.com -o scylla.txt
 ```
+
 
 #### users
 

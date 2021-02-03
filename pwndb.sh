@@ -148,7 +148,6 @@ pwait(){
   done
 }
 
-# Check if pwndb is up
 
 scylla(){
   cmd="$exact $domainname"
@@ -203,8 +202,21 @@ scylla_check(){
 
 [[ $scyllaserver == true ]] && scylla_check
 
-[[ $status == true ]] && echo -e "\e[33mChecking if pwndb is up ..."
-status_code=$(curl  --max-time 5 -sk -w "%{http_code}" --socks5-hostname $proxy pwndb2am4tzkvold.onion)
+check_if_up (){
+while true; do
+  for X in '-' '/' '|' '\'; do
+    printf "\e[33m\rChecking if pwndb is up $X"
+  sleep 0.1
+  done
+done
+}
+check_if_up &
+check_pid=$!
+
+status_code=$(curl  --max-time 10 -sk -w "%{http_code}" --socks5-hostname $proxy pwndb2am4tzkvold.onion)
+(kill $check_pid 2>&1) >/dev/null
+echo -ne "\r\033[K"
+
 if [[ $status_code == "000" ]]; then
   echo -e "\e[31mPwndb server is down ..."
   if [[ $status != true ]]; then
@@ -224,7 +236,7 @@ fi
 [[ $domain == true ]] && [[ $passwd == true ]] && echo "Cant search password and domain at the same time" && exit 1
 [[ -z $cmd ]] && cmd="echo %" && wild=''
 passwd(){
-    echo -ne "\r\e[0K\e[0m[`date -u -d @${SECONDS} +"%T"`]--→[$1]"
+    echo -ne "\r\e[0K\e[0m[`date -u -d @${SECONDS} +"%T"`]──→[$1]"
   until [[ $(curl  -sk -o "$tmp/req/$1.txt" -w "%{http_code}" --socks5-hostname $proxy -d "password=$1&submitform=pw"  pwndb2am4tzkvold.onion) == 200 ]] ; do 
     echo -ne "\r\e[0KProblem occurs... restart $line"
     sleep 3 
@@ -234,13 +246,14 @@ passwd(){
     if grep '\[luser\] =' <<<"$line" >/dev/null; then user="$(cut -d ' ' -f7 <<<"$line")"; fi
     if grep '\[domain\] =' <<<"$line" >/dev/null ; then domain="$(cut -d ' ' -f7 <<<"$line")"; fi
     if grep '\[password\] =' <<<"$line" >/dev/null ; then pass="$(cut -d ' ' -f7 <<<"$line")"; fi
-    [[ $line == ")" ]] && [[ -n $user ]] && echo -ne "\r\e[31m[\e[37m$1\e[31m]--→[\e[33m$user\e[0m@\e[37m$domain\e[0m:\e[36m$pass\e[31m]\n" && echo "$user@$domain:$pass" >> "$tmp/res/$1.txt"  
+    [[ $line == ")" ]] && [[ -n $user ]] && echo -ne "\r\e[31m[\e[37m$1\e[31m]──→[\e[33m$user\e[0m@\e[37m$domain\e[0m:\e[36m$pass\e[31m]\n" && echo "$user@$domain:$pass" >> "$tmp/res/$1.txt"
   done < <(eval pup pre < $tmp/req/$1.txt | sed '1,11d;$d')
 }
 
 
 req_n_parse(){
-  echo -ne "\r\e[0K\e[0m[`date -u -d @${SECONDS} +"%T"`]--→[$1]"
+  [[ $1 == "%" ]] && usr="all" || usr=$1
+  echo -ne "\r\e[0K\e[0m[`date -u -d @${SECONDS} +"%T"`]──→[$usr]"
   until [[ $(curl  -sk -o "$tmp/req/$1.txt" -w "%{http_code}" --socks5-hostname $proxy -d "luser=$1$2&domain=$3&luseropr=$4&domainopr=1&submitform=em"  pwndb2am4tzkvold.onion) == 200 ]] ; do 
     echo -ne "\r\e[0KProblem occurs... restart $line"
     sleep 3 
@@ -250,7 +263,7 @@ req_n_parse(){
     if grep '\[luser\] =' <<<"$line" >/dev/null; then user="$(cut -d ' ' -f7 <<<"$line")"; fi
     if grep '\[domain\] =' <<<"$line" >/dev/null ; then domain="$(cut -d ' ' -f7 <<<"$line")"; fi
     if grep '\[password\] =' <<<"$line" >/dev/null ; then pass="$(cut -d ' ' -f7 <<<"$line")"; fi
-    [[ $line == ")" ]] && [[ -n $user ]] && echo -ne "\r\e[31m[\e[37m$1\e[31m]--→[\e[33m$user\e[0m@\e[37m$domain\e[0m:\e[36m$pass\e[31m]\n" && echo "$user@$domain:$pass" >> "$tmp/res/$1.txt"  
+    [[ $line == ")" ]] && [[ -n $user ]] && echo -ne "\r\e[31m[\e[37m$usr\e[31m]──→[\e[33m$user\e[0m@\e[37m$domain\e[0m:\e[36m$pass\e[31m]\n" && echo "$user@$domain:$pass" >> "$tmp/res/$usr.txt"
   done < <(eval pup pre < $tmp/req/$1.txt | sed '1,11d;$d')
   rm $tmp/req/$1.txt
 }
@@ -272,4 +285,7 @@ while IFS= read -r dom; do
 done < <(eval $cmddom)
 wait
 
-echo -e "\n\nDuration: `date -u -d @${SECONDS} +"%T"`"
+if ! ls $tmp/res/*.txt 1> /dev/null 2>&1; then
+  echo -e "\r\e[0K\e[38;5;15;48;5;196mNo results found ...\e[0m"
+fi
+echo -e "\e[33mDuration: `date -u -d @${SECONDS} +"%T"`"

@@ -13,9 +13,9 @@ this tool was build for solve limitations of pwndb:
 - Check if pwndb server is up
 - ...
 
-It will also:
-- Use scylla when pwndb is down (or not)
-- Can be use with nmap as an NSE script
+
+### Searching on "scylla.sh" was remove since website is now dead..
+
 
 ## Install:
 
@@ -37,34 +37,6 @@ sudo cp pwndb.sh /usr/bin/pwndb
 sudo chmod +x /usr/bin/pwndb
 ```
 
-### Nmap NSE
-
-![nmap](nse.png)
-
-This script will check for all passwords from the target.
-
-#### Install
-
-After the previous step you can add the nse script as follow:
-
-```sh
-sudo cp pwndb.nse /usr/share/nmap/scripts/pwndb.nse
-sudo nmap --script-update
-```
-
-#### Run
-
-then just run
-
-```sh
-nmap --script pwndb test.me
-```
-
-If you don't want to check on pwndb and want to check directly on scylla (if you know that pwndb is down (very often)), you can pass args to the nse script for save couple of seconds:
-
-```sh
-nmap --script pwndb --script-args="pwndb.scylla=true" test.me
-```
 
 ### Termux
 
@@ -118,8 +90,6 @@ docker run --rm -v `pwd`:/app pwndb --proxy 192.168.75.222:9050 -p fuckthepopo -
 -D|--domain-list [FILE]   file containing domains (1 per line)
 -b|--brute-force [NUMBER] brute force   1 will be A to Z ,
                                         2 will be AA to ZZ
--S|--scylla               Check on scylla.sh instead of pwndb
-                            (automatic if pwndb is down)
 -p|--password [PASSWORD]  reverse password search
 -P|--password-list [FILE] file containing passwords
 -j|--jobs [number]        number of background jobs (max 10, 5 by default)
@@ -140,18 +110,6 @@ pwndb -s
 ```
 
 It will exit in both case (up or down)
-
-
-#### Scylla
-
-If pwndb is down it will automaticly search on [scylla.sh](https://scylla.sh/api)
-
-But f pwndb is up and you want to search on scylla instead pwndb you can use:
-
-```sh
-pwndb -S -u test -o scylla.txt
-pwndb -S -u test -d gmail.com -o scylla.txt
-```
 
 
 #### users
@@ -199,6 +157,7 @@ You cant set more than 10 background jobs (with more )
 
 ```
 pwndb -u crime -e -d gmail.com -o result.txt
+pwndb -u fuck
 pwndb -U user.lst -D domain.lst -x 127.0.0.1:9999
 pwndb -b 2  -d gmail.com -o result.txt
 pwndb -b 4 -j 10 -d "%.gouv.fr"
